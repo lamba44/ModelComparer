@@ -10,7 +10,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 
-df = pd.read_csv("../credit_card_fraud_10k.csv")
+df = pd.read_csv("../credit_card_fraud_10k.csv")  # update filename if needed
 TARGET = "is_fraud"
 X = df.drop(columns=[TARGET])
 y = df[TARGET]
@@ -57,7 +57,9 @@ for name, model in models.items():
         y_test, predictions, average="weighted", zero_division=0
     )
 
-    model_fname = f"../models/{name.replace(' ', '_')}_{int(time.time())}.joblib"
+    safe_name = name.replace(" ", "_")
+    model_fname = f"../models/{safe_name}.joblib"
+
     joblib.dump({"model": model, "columns": X.columns.tolist()}, model_fname)
     model_size = os.path.getsize(model_fname)
 
