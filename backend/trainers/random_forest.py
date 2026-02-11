@@ -19,28 +19,6 @@ def _model_filename(base_name: str, task: str):
 
 
 def train(X_train, y_train, X_val, y_val, config=None):
-    """
-    Train Random Forest for classification or regression.
-    Args:
-        X_train, X_val: numpy arrays or array-like (already preprocessed)
-        y_train, y_val: 1d arrays
-        config: dict with optional keys:
-            - task: "classification" or "regression" (required)
-            - n_estimators: int (default 100)
-            - max_depth: int or None
-            - random_state: int
-            - model_dir: directory to save models (default "models")
-    Returns:
-        result dict:
-        {
-          "model_name": "Random Forest",
-          "model_path": "models/...",
-          "metrics": {...},
-          "train_time": 12.34,
-          "model_size": 123456,
-          "extra": {...}
-        }
-    """
 
     if config is None:
         config = {}
@@ -48,6 +26,8 @@ def train(X_train, y_train, X_val, y_val, config=None):
     task = config.get("task")
     if task not in ("classification", "regression"):
         raise ValueError("config['task'] must be 'classification' or 'regression'")
+
+    return_model = bool(config.get("return_model", False))
 
     n_estimators = config.get("n_estimators", 100)
     max_depth = config.get("max_depth", None)
@@ -122,5 +102,13 @@ def train(X_train, y_train, X_val, y_val, config=None):
         "model_size": model_size,
         "extra": extra,
     }
+
+    meta = {}
+    if task == "classification":
+        # sklearn RF classifier exposes classes_
+        meta["classes"] = getattr(model, "classes_", None)
+
+    if return_model:
+        return result, model, meta
 
     return result

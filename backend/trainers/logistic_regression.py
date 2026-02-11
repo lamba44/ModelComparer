@@ -19,21 +19,6 @@ def _model_filename(task: str):
 
 
 def train(X_train, y_train, X_val, y_val, config=None):
-    """
-    Train Logistic Regression (classification only).
-
-    Args:
-        X_train, X_val: preprocessed feature arrays
-        y_train, y_val: target arrays
-        config: dict with optional keys:
-            - task: must be "classification"
-            - max_iter: int (default 1000)
-            - random_state: int
-            - model_dir: directory to save models
-
-    Returns:
-        standardized result dict
-    """
 
     if config is None:
         config = {}
@@ -41,6 +26,8 @@ def train(X_train, y_train, X_val, y_val, config=None):
     task = config.get("task")
     if task != "classification":
         raise ValueError("Logistic Regression supports classification only")
+
+    return_model = bool(config.get("return_model", False))
 
     max_iter = config.get("max_iter", 1000)
     random_state = config.get("random_state", 42)
@@ -105,5 +92,11 @@ def train(X_train, y_train, X_val, y_val, config=None):
             "max_iter": max_iter,
         },
     }
+
+    meta = {}
+    meta["classes"] = getattr(model, "classes_", None)
+
+    if return_model:
+        return result, model, meta
 
     return result
