@@ -8,6 +8,9 @@ from sklearn.neural_network import MLPClassifier, MLPRegressor
 
 from utils import metrics as metrics_module
 
+from scipy import sparse
+from utils.sparse_to_dense import sparse_to_dense_via_svd
+
 
 def _ensure_dir(path):
     os.makedirs(path, exist_ok=True)
@@ -38,7 +41,6 @@ def train(X_train, y_train, X_val, y_val, config=None):
 
     _ensure_dir(model_dir)
 
-    # Defensive conversion
     X_train = np.asarray(X_train)
     X_val = np.asarray(X_val)
     y_train = np.asarray(y_train)

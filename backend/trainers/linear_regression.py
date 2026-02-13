@@ -35,7 +35,6 @@ def train(X_train, y_train, X_val, y_val, config=None):
 
     _ensure_dir(model_dir)
 
-    # Defensive conversion
     X_train = np.asarray(X_train)
     X_val = np.asarray(X_val)
     y_train = np.asarray(y_train)

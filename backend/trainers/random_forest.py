@@ -36,7 +36,6 @@ def train(X_train, y_train, X_val, y_val, config=None):
 
     _ensure_dir(model_dir)
 
-    # Convert to numpy arrays (defensive)
     X_train = np.asarray(X_train)
     X_val = np.asarray(X_val)
     y_train = np.asarray(y_train)
@@ -60,13 +59,10 @@ def train(X_train, y_train, X_val, y_val, config=None):
     # Predictions
     y_pred = model.predict(X_val)
 
-    # For classification, try to get probabilities if possible (useful for ROC-AUC)
     y_proba_for_metrics = None
     if task == "classification" and hasattr(model, "predict_proba"):
         try:
             y_proba = model.predict_proba(X_val)
-            # If binary, pass positive-class probability as 1d array for AUC;
-            # otherwise pass the 2D array (roc_auc_score can accept that with multi_class)
             if y_proba.ndim == 2 and y_proba.shape[1] == 2:
                 y_proba_for_metrics = y_proba[:, 1]
             else:
@@ -87,7 +83,6 @@ def train(X_train, y_train, X_val, y_val, config=None):
     # Model file size
     model_size = os.path.getsize(model_path)
 
-    # Optional extras
     extra = {
         "n_estimators": n_estimators,
         "max_depth": max_depth,
