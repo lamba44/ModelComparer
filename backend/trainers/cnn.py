@@ -43,14 +43,14 @@ def train(X_train, y_train, X_val, y_val, config=None):
 
     return_model = bool(config.get("return_model", False))
 
-    epochs = int(config.get("epochs", 20))
+    epochs = int(config.get("epochs", 200))
     batch_size = int(config.get("batch_size", 32))
     learning_rate = float(config.get("learning_rate", 0.001))
     conv_filters = config.get("conv_filters", [32, 64])
     kernel_size = int(config.get("kernel_size", 3))
     pool_size = int(config.get("pool_size", 2))
     dense_units = int(config.get("dense_units", 64))
-    patience = int(config.get("patience", 5))
+    patience = int(config.get("patience", 10))
     model_dir = config.get("model_dir", "models")
     random_seed = int(config.get("random_seed", 42))
     base_name = config.get("base_name", "cnn")
