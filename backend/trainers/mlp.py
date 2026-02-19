@@ -1,3 +1,4 @@
+# trainers/mlp.py
 import os
 import time
 from datetime import datetime
@@ -7,9 +8,6 @@ import numpy as np
 from sklearn.neural_network import MLPClassifier, MLPRegressor
 
 from utils import metrics as metrics_module
-
-from scipy import sparse
-from utils.sparse_to_dense import sparse_to_dense_via_svd
 
 
 def _ensure_dir(path):
@@ -22,6 +20,11 @@ def _model_filename(base_name: str, task: str):
 
 
 def train(X_train, y_train, X_val, y_val, config=None):
+    """
+    Train an MLPClassifier or MLPRegressor depending on config['task'].
+    Preserves the existing result dict format used elsewhere in the project.
+    If config['return_model'] is True, returns (result, model, meta).
+    """
 
     if config is None:
         config = {}
@@ -41,6 +44,7 @@ def train(X_train, y_train, X_val, y_val, config=None):
 
     _ensure_dir(model_dir)
 
+    # Ensure numpy arrays
     X_train = np.asarray(X_train)
     X_val = np.asarray(X_val)
     y_train = np.asarray(y_train)
