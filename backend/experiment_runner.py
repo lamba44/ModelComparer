@@ -138,7 +138,6 @@ def run_experiment(csv_path, target_column, task, selected_models, config=None):
 
         result = res[0] if isinstance(res, tuple) else res
 
-        # 🔵 FULL LONG FORM RESULT PRINT
         print("\nFULL RESULT DICT:")
         pprint(result)
 
@@ -166,8 +165,8 @@ def run_experiment(csv_path, target_column, task, selected_models, config=None):
 
 
 if __name__ == "__main__":
-    CSV = "samplefiles/credit_fraud.csv"
-    TARGET = "is_fraud"
+    CSV = "samplefiles/placement_data.csv"
+    TARGET = "placed"
     TASK = "classification"
     SELECTED = [
         "Random Forest Classifier",
