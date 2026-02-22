@@ -41,12 +41,12 @@ def train(X_train, y_train, X_val, y_val, config=None):
 
     return_model = bool(config.get("return_model", False))
 
-    epochs = int(config.get("epochs", 30))
+    epochs = int(config.get("epochs", 200))
     batch_size = int(config.get("batch_size", 32))
     learning_rate = float(config.get("learning_rate", 0.001))
     lstm_units = int(config.get("lstm_units", 64))
     dense_units = int(config.get("dense_units", 64))
-    patience = int(config.get("patience", 5))
+    patience = int(config.get("patience", 10))
     model_dir = config.get("model_dir", "models")
     random_seed = int(config.get("random_seed", 42))
     base_name = config.get("base_name", "lstm")
