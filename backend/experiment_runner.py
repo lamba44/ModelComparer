@@ -32,6 +32,11 @@ SELECTION_TO_MODULE = {
     "MLP + CNN": "trainers.combos.mlp_plus_cnn",
     "MLP + LSTM": "trainers.combos.mlp_plus_lstm",
     "CNN + LSTM": "trainers.combos.cnn_plus_lstm",
+    "Random Forest + MLP + CNN": "trainers.combos.rf_plus_mlp_plus_cnn",
+    "Random Forest + CNN + LSTM": "trainers.combos.rf_plus_cnn_plus_lstm",
+    "Logistic Regression + MLP + CNN": "trainers.combos.lr_plus_mlp_plus_cnn",
+    "Random Forest + Logistic Regression + MLP": "trainers.combos.rf_plus_logistic_plus_mlp",
+    "Random Forest + Logistic Regression + CNN": "trainers.combos.rf_plus_logistic_plus_cnn",
     # regression singles
     "Linear Regression": "trainers.linear_regression",
     "Random Forest Regressor": "trainers.random_forest_regressor",
@@ -163,7 +168,6 @@ def run_experiment(csv_path, target_column, task, selected_models, config=None):
         total_time += row["train_time"]
         total_size += row["model_size"]
 
-    # Clean summary table
     _print_table(rows, task)
 
     print(f"Total train time: {total_time:.3f}s")
@@ -175,12 +179,8 @@ def run_experiment(csv_path, target_column, task, selected_models, config=None):
 
 if __name__ == "__main__":
     CSV = "samplefiles/placement_data.csv"
-    TARGET = "placed"
-    TASK = "classification"
-    SELECTED = [
-        "CNN",
-        "LSTM",
-        "MLP",
-    ]
+    TARGET = "salary_lpa"
+    TASK = "regression"
+    SELECTED = ["Linear Regression", "Random Forest Regressor", "MLP Regressor"]
 
     run_experiment(CSV, TARGET, TASK, SELECTED, config={"model_dir": "models"})
