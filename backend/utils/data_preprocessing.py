@@ -13,25 +13,25 @@ def _detect_and_drop_leaky_columns(
     X_train,
     X_test,
     y_train,
+    task="classification",
     uniq_thresh=0.8,
     missing_diff_thresh=0.9,
     corr_thresh=0.95,
     zero_frac_diff_thresh=0.9,
+    min_unique_values_for_classification=50,
 ):
-    """
-    Heuristic-based detector to remove columns that strongly indicate leakage:
-      - ID-like columns (>= uniq_thresh fraction unique values)
-      - Columns whose presence/non-null rate differs by > missing_diff_thresh between classes
-      - Numeric columns with abs(corr) >= corr_thresh with the target
-      - Numeric columns where the fraction of zeros (or a sentinel value) differs by > zero_frac_diff_thresh between classes
-      - Numeric columns that are constant within any class (nunique per class == 1)
-    Returns: X_train_clean, X_test_clean, list_of_dropped_columns
-    """
+
     dropped = {}
     n_rows = len(X_train)
-    classes = np.unique(y_train)
 
-    # 1) ID-like columns (many uniques)
+    unique_y = np.unique(y_train)
+    consider_as_classification = False
+    if (
+        task == "classification"
+        and len(unique_y) <= min_unique_values_for_classification
+    ):
+        consider_as_classification = True
+
     for c in X_train.columns:
         try:
             uniq_frac = X_train[c].nunique(dropna=False) / float(n_rows)
@@ -40,8 +40,7 @@ def _detect_and_drop_leaky_columns(
         except Exception:
             continue
 
-    # 2) Class-dependent presence (missingness)
-    if len(classes) > 1:
+    if consider_as_classification:
         for c in X_train.columns:
             if c in dropped:
                 continue
@@ -56,13 +55,11 @@ def _detect_and_drop_leaky_columns(
             except Exception:
                 continue
 
-    # 3) Numeric correlation with target
     try:
         numeric_cols = X_train.select_dtypes(include=[np.number]).columns.tolist()
     except Exception:
         numeric_cols = []
     if len(numeric_cols) > 0:
-        # try to coerce y to numeric for correlation calculation
         ynum = pd.to_numeric(y_train, errors="coerce")
         if not np.all(np.isnan(ynum)):
             for c in numeric_cols:
@@ -70,7 +67,6 @@ def _detect_and_drop_leaky_columns(
                     continue
                 try:
                     if X_train[c].nunique() <= 1:
-                        # constant column overall — treat as leaky/useless
                         dropped[c] = "constant_overall"
                         continue
                     corr = abs(X_train[c].corr(ynum))
@@ -79,84 +75,68 @@ def _detect_and_drop_leaky_columns(
                 except Exception:
                     continue
 
-    # 4) Numeric sentinel/zero-fraction differences and per-class constant detection
-    #    (This catches columns like salary_lpa where unplaced rows have salary==0)
-    for c in numeric_cols:
-        if c in dropped:
-            continue
-        try:
-            per_class_nunique = X_train.groupby(y_train)[c].nunique(dropna=False)
-            # If any class has exactly 1 unique value for that column and others differ -> suspicious
-            if (
-                per_class_nunique == 1
-            ).any() and per_class_nunique.max() != per_class_nunique.min():
-                dropped[c] = (
-                    "constant_within_class (per_class_nunique=%s)"
-                    % per_class_nunique.to_dict()
-                )
+    if consider_as_classification:
+        for c in numeric_cols:
+            if c in dropped:
                 continue
+            try:
+                per_class_nunique = X_train.groupby(y_train)[c].nunique(dropna=False)
+                if (
+                    per_class_nunique == 1
+                ).any() and per_class_nunique.max() != per_class_nunique.min():
+                    dropped[c] = (
+                        "constant_within_class (per_class_nunique=%s)"
+                        % per_class_nunique.to_dict()
+                    )
+                    continue
 
-            # Fraction of zeros (or sentinel equal to the column's min)
-            # Using zero as common sentinel; also test fraction equal to the class-min
-            frac_zero_by_class = X_train.groupby(y_train)[c].apply(
-                lambda s: (s == 0).mean()
-            )
-            if (
-                frac_zero_by_class.max() - frac_zero_by_class.min()
-            ) >= zero_frac_diff_thresh:
-                dropped[c] = "zero_fraction_diff (zero_frac_diff=%.3f)" % (
+                frac_zero_by_class = X_train.groupby(y_train)[c].apply(
+                    lambda s: (s == 0).mean()
+                )
+                if (
                     frac_zero_by_class.max() - frac_zero_by_class.min()
-                )
-                continue
+                ) >= zero_frac_diff_thresh:
+                    dropped[c] = "zero_fraction_diff (zero_frac_diff=%.3f)" % (
+                        frac_zero_by_class.max() - frac_zero_by_class.min()
+                    )
+                    continue
 
-            # Another sentinel: if one class has values all equal to min (e.g., 0.0) and other class not
-            min_eq_by_class = X_train.groupby(y_train)[c].apply(
-                lambda s: (s == s.min()).mean()
-            )
-            if (min_eq_by_class.max() - min_eq_by_class.min()) >= zero_frac_diff_thresh:
-                dropped[c] = "min_value_presence_diff (min_fraction_diff=%.3f)" % (
+                min_eq_by_class = X_train.groupby(y_train)[c].apply(
+                    lambda s: (s == s.min()).mean()
+                )
+                if (
                     min_eq_by_class.max() - min_eq_by_class.min()
-                )
+                ) >= zero_frac_diff_thresh:
+                    dropped[c] = "min_value_presence_diff (min_fraction_diff=%.3f)" % (
+                        min_eq_by_class.max() - min_eq_by_class.min()
+                    )
+                    continue
+            except Exception:
                 continue
-        except Exception:
-            continue
 
-    # 5) Categorical columns perfectly mapping to target (already strong leak)
     try:
         cat_cols = X_train.select_dtypes(
             include=["object", "category", "bool", "string"]
         ).columns.tolist()
     except Exception:
         cat_cols = []
-    for c in cat_cols:
-        if c in dropped:
-            continue
-        try:
-            grp = (
-                X_train.groupby(c)[y_train.name].nunique(dropna=False)
-                if y_train.name in X_train.columns
-                else X_train.groupby(c)[y_train.index].apply(
-                    lambda idx: y_train.loc[idx].nunique()
+    if consider_as_classification:
+        for c in cat_cols:
+            if c in dropped:
+                continue
+            try:
+                mapping = (
+                    X_train[[c]]
+                    .join(
+                        pd.Series(y_train.values, index=X_train.index, name="_target")
+                    )
+                    .groupby(c)["_target"]
+                    .nunique(dropna=False)
                 )
-            )
-            # The above is fragile if y_train.name not aligned; safer approach:
-            grp = X_train.groupby(c)[c].apply(
-                lambda s: 1
-            )  # dummy to use structure below
-        except Exception:
-            grp = None
-        try:
-            # Simpler: check mapping by pivoting: for each category value, how many unique target labels appear?
-            mapping = (
-                X_train[[c]]
-                .join(pd.Series(y_train.values, index=X_train.index, name="_target"))
-                .groupby(c)["_target"]
-                .nunique(dropna=False)
-            )
-            if mapping.max() == 1:
-                dropped[c] = "cat_value_maps_to_single_target"
-        except Exception:
-            continue
+                if mapping.max() == 1:
+                    dropped[c] = "cat_value_maps_to_single_target"
+            except Exception:
+                continue
 
     # finalize list
     dropped_list = sorted(dropped.keys())
@@ -186,19 +166,8 @@ def load_and_preprocess(
     missing_diff_thresh: float = 0.9,
     corr_thresh: float = 0.95,
     zero_frac_diff_thresh: float = 0.9,
+    min_unique_values_for_classification: int = 50,
 ):
-    """
-    Improved preprocessing that avoids exploding one-hot encodings for high-cardinality categorical features
-    and detects/drops obvious leakage columns (IDs, post-outcome features like salary).
-
-    Strategy:
-     - Read CSV and split train/test early (to avoid leakage when computing encodings).
-     - Auto-detect and drop ID-like / leaky columns using heuristics (improved to detect sentinel patterns).
-     - For remaining categorical columns:
-         * If n_unique > high_cardinality_threshold  -> apply frequency (count) encoding (treated as numeric).
-         * Else -> apply OneHotEncoder(sparse) followed by TruncatedSVD to compress to `svd_components` dimensions.
-     - Numeric columns are StandardScaled.
-    """
 
     df = pd.read_csv(csv_path)
     if target_column not in df.columns:
@@ -207,7 +176,6 @@ def load_and_preprocess(
     X = df.drop(columns=[target_column])
     y = df[target_column]
 
-    # Split early to compute encodings on training only (avoid leakage)
     X_train, X_test, y_train, y_test = train_test_split(
         X,
         y,
@@ -216,18 +184,18 @@ def load_and_preprocess(
         stratify=(y if task == "classification" else None),
     )
 
-    # Detect and drop obvious leaky / ID columns (this modifies X_train / X_test)
     X_train, X_test, dropped_cols = _detect_and_drop_leaky_columns(
         X_train,
         X_test,
         y_train,
+        task=task,
         uniq_thresh=uniq_thresh,
         missing_diff_thresh=missing_diff_thresh,
         corr_thresh=corr_thresh,
         zero_frac_diff_thresh=zero_frac_diff_thresh,
+        min_unique_values_for_classification=min_unique_values_for_classification,
     )
 
-    # Recompute column type lists after dropping
     numeric_cols_all = X_train.select_dtypes(
         include=["int64", "float64", "number"]
     ).columns.tolist()
@@ -235,7 +203,6 @@ def load_and_preprocess(
         include=["object", "category", "bool", "string"]
     ).columns.tolist()
 
-    # Decide which categorical columns are high-cardinality
     high_card_cols = []
     normal_cat_cols = []
     for c in categorical_cols_all:
@@ -248,14 +215,12 @@ def load_and_preprocess(
         else:
             normal_cat_cols.append(c)
 
-    # Frequency / count encode high-cardinality categorical columns
     for c in high_card_cols:
         counts = X_train[c].value_counts().to_dict()
         X_train[c] = X_train[c].map(counts).fillna(0).astype(float)
         X_test[c] = X_test[c].map(counts).fillna(0).astype(float)
         numeric_cols_all.append(c)
 
-    # Build pipelines
     numeric_pipeline = Pipeline([("scaler", StandardScaler())])
     transformers = []
     if numeric_cols_all:
@@ -287,20 +252,16 @@ def load_and_preprocess(
         transformers=transformers, remainder="drop", sparse_threshold=0.0
     )
 
-    # Fit/transform on training set only
     X_train_trans = preprocessor.fit_transform(X_train)
     X_test_trans = preprocessor.transform(X_test)
 
-    # If result is sparse, convert to dense only when safe (small feature count).
     if sparse.issparse(X_train_trans):
         n_features = X_train_trans.shape[1]
-        # Heuristic: only convert to dense if feature dimension is reasonably small to avoid MemoryError.
         if n_features <= 20000:
             try:
                 X_train_trans = X_train_trans.toarray()
                 X_test_trans = X_test_trans.toarray()
             except MemoryError:
-                # leave sparse if conversion fails
                 pass
 
     if dropped_cols:
