@@ -1,12 +1,3 @@
-"""
-experiment_runner.py
-
-- Runs selected models (single or combo) on a CSV + target.
-- Prints FULL result dict for each model.
-- Prints clean comparison table at end.
-- Does NOT save run summaries to disk.
-"""
-
 import importlib
 from datetime import datetime
 from pprint import pprint
@@ -42,10 +33,10 @@ SELECTION_TO_MODULE = {
     "Random Forest Regressor": "trainers.random_forest_regressor",
     "MLP Regressor": "trainers.mlp_regressor",
     # regression combos
-    "Linear Regression + RF Regressor": "trainers.combos.linear_plus_random_forest_regressor",
+    "Linear Regression + Random Forest Regressor": "trainers.combos.linear_plus_random_forest_regressor",
     "Linear Regression + MLP Regressor": "trainers.combos.linear_plus_mlp_regressor",
-    "RF Regressor + MLP Regressor": "trainers.combos.rf_regressor_plus_mlp_regressor",
-    "Linear Regression + RF Regressor + MLP Regressor": "trainers.combos.linear_plus_rf_plus_mlp_regressor",
+    "Random Forest Regressor + MLP Regressor": "trainers.combos.rf_regressor_plus_mlp_regressor",
+    "Linear Regression + Random Forest Regressor + MLP Regressor": "trainers.combos.linear_plus_rf_plus_mlp_regressor",
 }
 
 
