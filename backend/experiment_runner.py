@@ -26,6 +26,12 @@ SELECTION_TO_MODULE = {
     "Random Forest + MLP": "trainers.combos.rf_plus_mlp",
     "Random Forest + CNN": "trainers.combos.rf_plus_cnn",
     "Random Forest + LSTM": "trainers.combos.rf_plus_lstm",
+    "Logistic Regression + MLP": "trainers.combos.lr_plus_mlp",
+    "Logistic Regression + CNN": "trainers.combos.lr_plus_cnn",
+    "Logistic Regression + LSTM": "trainers.combos.lr_plus_lstm",
+    "MLP + CNN": "trainers.combos.mlp_plus_cnn",
+    "MLP + LSTM": "trainers.combos.mlp_plus_lstm",
+    "CNN + LSTM": "trainers.combos.cnn_plus_lstm",
     # regression singles
     "Linear Regression": "trainers.linear_regression",
     "Random Forest Regressor": "trainers.random_forest_regressor",
@@ -172,9 +178,9 @@ if __name__ == "__main__":
     TARGET = "placed"
     TASK = "classification"
     SELECTED = [
-        "Random Forest Classifier",
+        "CNN",
         "LSTM",
-        "Random Forest + LSTM",
+        "MLP",
     ]
 
     run_experiment(CSV, TARGET, TASK, SELECTED, config={"model_dir": "models"})
