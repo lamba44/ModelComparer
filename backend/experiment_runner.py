@@ -41,6 +41,11 @@ SELECTION_TO_MODULE = {
     "Linear Regression": "trainers.linear_regression",
     "Random Forest Regressor": "trainers.random_forest_regressor",
     "MLP Regressor": "trainers.mlp_regressor",
+    # regression combos
+    "Linear Regression + RF Regressor": "trainers.combos.linear_plus_random_forest_regressor",
+    "Linear Regression + MLP Regressor": "trainers.combos.linear_plus_mlp_regressor",
+    "RF Regressor + MLP Regressor": "trainers.combos.rf_regressor_plus_mlp_regressor",
+    "Linear Regression + RF Regressor + MLP Regressor": "trainers.combos.linear_plus_rf_plus_mlp_regressor",
 }
 
 
@@ -181,6 +186,10 @@ if __name__ == "__main__":
     CSV = "samplefiles/placement_data.csv"
     TARGET = "salary_lpa"
     TASK = "regression"
-    SELECTED = ["Linear Regression", "Random Forest Regressor", "MLP Regressor"]
+    SELECTED = [
+        "Linear Regression",
+        "Random Forest Regressor",
+        "Linear Regression + RF Regressor + MLP Regressor",
+    ]
 
     run_experiment(CSV, TARGET, TASK, SELECTED, config={"model_dir": "models"})
