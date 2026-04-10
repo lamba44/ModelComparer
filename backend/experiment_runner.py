@@ -1,6 +1,10 @@
+import csv
 import importlib
+import os
 from datetime import datetime
 from pprint import pprint
+
+import numpy as np
 
 from utils.data_preprocessing import load_and_preprocess
 
@@ -118,6 +122,28 @@ def _print_table(rows, task):
     print()
 
 
+def _save_predictions_csv(y_test, predictions_per_model, output_dir="outputs"):
+    """Save actual vs predicted values for each model to a CSV file."""
+    os.makedirs(output_dir, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = os.path.join(output_dir, f"predictions_comparison_{timestamp}.csv")
+
+    # Build header: Actual + one column per model
+    headers = ["Actual"] + [name for name, _ in predictions_per_model]
+
+    with open(filename, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(headers)
+        for i, actual in enumerate(y_test):
+            row = [actual] + [
+                preds[i] if i < len(preds) else "" for _, preds in predictions_per_model
+            ]
+            writer.writerow(row)
+
+    print(f"\nPredictions CSV saved to: {filename}")
+    return filename
+
+
 def run_experiment(csv_path, target_column, task, selected_models, config=None):
     if config is None:
         config = {}
@@ -134,6 +160,7 @@ def run_experiment(csv_path, target_column, task, selected_models, config=None):
     rows = []
     total_time = 0.0
     total_size = 0
+    predictions_per_model = []  # list of (model_name, predictions_list)
 
     for sel in selected_models:
         print(f"\n=== Running: {sel} ===")
@@ -164,11 +191,28 @@ def run_experiment(csv_path, target_column, task, selected_models, config=None):
         total_time += row["train_time"]
         total_size += row["model_size"]
 
+        # Collect predictions for CSV export
+        raw_preds = result.get("predictions")
+        if raw_preds is not None:
+            preds_list = list(raw_preds)
+        else:
+            # Fallback: re-predict if trainer didn't return predictions
+            preds_list = []
+        predictions_per_model.append((sel, preds_list))
+
     _print_table(rows, task)
 
     print(f"Total train time: {total_time:.3f}s")
     print(f"Total model size: {_human_size(total_size)}")
     print(f"Run finished: {datetime.now().isoformat()}")
+
+    # Export actual vs predicted CSV
+    output_dir = config.get("output_dir", "outputs")
+    _save_predictions_csv(
+        y_test.tolist() if hasattr(y_test, "tolist") else list(y_test),
+        predictions_per_model,
+        output_dir=output_dir,
+    )
 
     return rows
 

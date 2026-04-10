@@ -95,6 +95,7 @@ def train(X_train, y_train, X_val, y_val, config=None):
         "metrics": computed_metrics,
         "train_time": train_time,
         "model_size": model_size,
+        "predictions": y_pred.tolist(),
         "extra": extra,
     }
 
