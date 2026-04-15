@@ -111,6 +111,7 @@ def train(X_train, y_train, X_val, y_val, config=None):
         "metrics": metrics,
         "train_time": sum_train_time,
         "model_size": sum_model_size,
+        "predictions": list(combined_preds),
         "extra": {
             "components": component_model_paths,
             "method": "soft_average",
